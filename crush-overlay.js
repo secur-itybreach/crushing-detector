@@ -9,7 +9,15 @@
 // ==========================================
 
 import { LSystem } from './LSystem.js';
+let socket;
 
+function initSocket() {
+  socket = new WebSocket("ws://127.0.0.1:9980");
+
+  socket.onopen = () => console.log("WS connected");
+  socket.onclose = () => console.log("WS closed");
+  socket.onerror = (e) => console.error("WS error", e);
+}
 new p5(function (p) {
 
     // ---- State ----
@@ -38,6 +46,7 @@ new p5(function (p) {
         cnv.elt.id = 'p5-overlay';
         placeholder.parentNode.replaceChild(cnv.elt, placeholder);
         p.clear();
+        initSocket();
     };
 
     // ---- Draw loop ----
@@ -51,14 +60,23 @@ new p5(function (p) {
 
         // Detect the TERMINE transition → spawn a fresh tree
         if (etatActuel === "TERMINE" && lastState !== "TERMINE") {
-        // Use the palette sampled from the object, falling back to defaults
             const palette = (typeof detectedPalette !== 'undefined' && detectedPalette)
                 ? detectedPalette
                 : FALLBACK_PALETTE;
+
             tree        = new LSystem(p, p.width / 2, p.height / 2, palette);
             active      = true;
             fade        = 1;
             holdCounter = 0;
+
+            console.log(`Added tree, palette: ${palette.map(c => `rgb(${c.r},${c.g},${c.b})`).join(' | ')}`);
+
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: "prompt",
+                    prompt: p.random(["flower", "shadows", "oranges"])
+                }));
+            }
         }
         lastState = etatActuel;
 
