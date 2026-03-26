@@ -64,7 +64,7 @@ new p5(function (p) {
                 ? detectedPalette
                 : FALLBACK_PALETTE;
 
-            tree        = new LSystem(p, p.width / 2, p.height / 2, palette);
+            tree        = new LSystem(p, p.width / 2, p.height, palette);
             active      = true;
             fade        = 1;
             holdCounter = 0;
