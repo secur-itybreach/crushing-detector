@@ -25,6 +25,8 @@ const TRADUCTION_UTILISATEUR = {
 const videoElement = document.getElementById('webcam');
 const canvasElement = document.getElementById('outputCanvas');
 const canvasCtx = canvasElement.getContext('2d', { willReadFrequently: true });
+const blackMaskCanvas = document.getElementById('black-mask');
+const blackMaskCtx = blackMaskCanvas.getContext('2d');
 const uiPanel = document.getElementById('ui-panel');
 const statusDiv = document.getElementById('status');
 const valType = document.getElementById('val-type');
@@ -37,7 +39,8 @@ const showVideoCheckbox = document.getElementById('showVideo'); // NOUVEAU
 let PARAMS = {
     minScore: 30, reqFrames: 15, tolMouvement: 30, crushPercent: 80, crushTime: 30,        
     distX: 35, distY: 35, maxLossFrames: 100, shieldMargin: 50, shieldHeightPct: 40, showUI: true,
-    showVideo: true // État de l'affichage vidéo
+    showVideo: true, // État de l'affichage vidéo
+    hideVideoBackground: false
 };
 
 let etatActuel = "INITIALISATION"; 
@@ -90,6 +93,25 @@ function jouerSonEcrasement() {
     osc.stop(audioCtx.currentTime + 0.3);
 }
 
+function syncBlackMaskCanvas() {
+    if (!blackMaskCanvas) return;
+
+    blackMaskCanvas.width = canvasElement.width;
+    blackMaskCanvas.height = canvasElement.height;
+
+    blackMaskCanvas.style.width = canvasElement.clientWidth + "px";
+    blackMaskCanvas.style.height = canvasElement.clientHeight + "px";
+
+    blackMaskCtx.clearRect(0, 0, blackMaskCanvas.width, blackMaskCanvas.height);
+
+    if (PARAMS.hideVideoBackground) {
+        blackMaskCtx.fillStyle = "#000";
+        blackMaskCtx.fillRect(0, 0, blackMaskCanvas.width, blackMaskCanvas.height);
+        blackMaskCanvas.style.display = "block";
+    } else {
+        blackMaskCanvas.style.display = "none";
+    }
+}
 // ==========================================
 // INITIALISATION
 // ==========================================
@@ -97,8 +119,14 @@ async function init() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
         videoElement.srcObject = stream;
-        await new Promise(resolve => { videoElement.onloadeddata = () => { canvasElement.width = videoElement.videoWidth; canvasElement.height = videoElement.videoHeight; resolve(); }; });
-
+        await new Promise(resolve => {
+    videoElement.onloadeddata = () => {
+        canvasElement.width = videoElement.videoWidth;
+        canvasElement.height = videoElement.videoHeight;
+        syncBlackMaskCanvas();
+        resolve();
+    };
+});
         [modeleObjet, modeleMobileNet] = await Promise.all([
             cocoSsd.load(), mobilenet.load()
         ]);
@@ -659,9 +687,16 @@ document.querySelectorAll('input[type="range"]').forEach(input => {
         if (elem) elem.innerText = e.target.value + unit;
     });
 });
-
 window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') { PARAMS.showUI = !PARAMS.showUI; uiPanel.classList.toggle('hidden'); }
+    if (e.code === 'Space') {
+        PARAMS.showUI = !PARAMS.showUI;
+        uiPanel.classList.toggle('hidden');
+    }
+
+    if (e.code === 'KeyH') {
+        PARAMS.hideVideoBackground = !PARAMS.hideVideoBackground;
+        syncBlackMaskCanvas();
+    }
 });
 
 init();
