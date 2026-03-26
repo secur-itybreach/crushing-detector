@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracker d'Objets v9 (Moteur Invisible)</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <video id="webcam" autoplay playsinline></video>
+    
+    <div id="main-view">
+        <canvas id="outputCanvas"></canvas>
+        <canvas id="p5-overlay"></canvas>
+        <div id="prediction-banner">En attente d'un objet...</div>
+    </div>
+
+    <div id="ui-panel">
+        <div id="status">ÉTAT: CHARGEMENT IA...</div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="showVideo" checked>
+            <label for="showVideo">Afficher le flux vidéo (Debug)</label>
+        </div>
+
+        <div id="object-info">
+            <div class="info-row"><div id="val-type">Aucun déchet</div></div>
+        </div>
+
+        <div id="training-module" style="background: #2b2b2b; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #00ffcc;">
+            <label style="font-size: 11px; color: #00ffcc; font-weight: bold; text-transform: uppercase;">🧠 Entraîner l'IA Visuelle</label>
+            <select id="train-select" style="width: 100%; margin-top: 5px; margin-bottom: 5px; padding: 4px; background: #111; color: white; border: 1px solid #555;">
+                <option value="Canette Orange">Canette Orange (0)</option>
+                <option value="Canette Bleue">Canette Bleue (0)</option>
+                <option value="Canette Verte">Canette Verte (0)</option>
+                <option value="Canette Rouge">Canette Rouge (0)</option>
+                <option value="Gobelet Blanc">Gobelet Blanc (0)</option>
+                <option value="Déchet Gris/Noir">Déchet Gris/Noir (0)</option>
+            </select>
+            <button id="btn-train" class="btn btn-train">Capturer cette apparence</button>
+            <button id="btn-reset" class="btn btn-reset">Supprimer la mémoire de cet objet</button>
+            <div style="font-size: 11px; color: #aaa; margin-top: 8px; text-align: center;">Total en mémoire : <span id="train-count">0</span></div>
+        </div>
+
+        <hr>
+        <div class="control-group">
+            <label style="color: #c864ff;">Marge Fixation (Haut/Côtés): <span id="val-shieldmargin" style="color: #c864ff;">50px</span></label>
+            <input type="range" id="shieldMargin" min="0" max="150" value="50">
+        </div>
+        <div class="control-group">
+            <label style="color: #c864ff;">Hauteur Fixation (% objet): <span id="val-shieldheightpct" style="color: #c864ff;">40%</span></label>
+            <input type="range" id="shieldHeightPct" min="10" max="100" value="40">
+        </div>
+
+        <hr>
+        <div class="control-group">
+            <label>Niveau d'écrasement (%): <span id="val-crushpct">80%</span></label>
+            <input type="range" id="crushPercent" min="10" max="100" value="80">
+        </div>
+        <div class="control-group">
+            <label>Maintien écrasement (frames): <span id="val-crushtime">30</span></label>
+            <input type="range" id="crushTime" min="1" max="100" value="30">
+        </div>
+        <div class="control-group">
+            <label>Proximité X (Largeur): <span id="val-distx">35px</span></label>
+            <input type="range" id="distX" min="0" max="300" value="35">
+        </div>
+        <div class="control-group">
+            <label>Proximité Y (Bas): <span id="val-disty">35px</span></label>
+            <input type="range" id="distY" min="0" max="300" value="35">
+        </div>
+
+        <hr>
+        <div class="control-group">
+            <label>Confiance COCO requise: <span id="val-minscore">30%</span></label>
+            <input type="range" id="minScore" min="10" max="90" value="30">
+        </div>
+        <div class="control-group">
+            <label>Tolérance Mouvement: <span id="val-mov">30px</span></label>
+            <input type="range" id="tolMouvement" min="5" max="50" value="30">
+        </div>
+        <div class="control-group">
+            <label>Frames Initiale (Verrou): <span id="val-frames">15</span></label>
+            <input type="range" id="reqFrames" min="10" max="100" value="15">
+        </div>
+
+        <div id="whitelist-info">Objets : Bouteilles, tasses, couverts, fruits, écrans, plantes...</div>
+        <div class="instruction">Appuyez sur ESPACE pour masquer l'UI entière.</div>
+    </div>
+
+    <!-- Load order matters: sketch.js first (defines globals), then the p5 overlay -->
+    <script src="sketch.js"></script>
+    <script type="module" src="crush-overlay.js"></script>
+</body>
+
+</html>
