@@ -53,8 +53,11 @@ let ancienneBoiteObjet = null, boiteObjetVerrouillee = null;
 let detectedPalette = null;
 
 
-// Latest KNN object label, e.g. "Canette Orange"
-let detectedObjectLabel = null;
+// Latest live KNN prediction (can move while searching)
+let liveDetectedObjectLabel = null;
+
+// Locked label used during crushing / final state
+let lockedDetectedObjectLabel = null;
 
 // IA
 let modeleObjet = null, modeleMain = null, dernieresMains = []; 
@@ -174,8 +177,12 @@ async function executerKNNPrediction(box) {
     try {
         logits = obtenirFeaturesDeLaBox(box);
         const res = await classifieurKNN.predictClass(logits);
-        detectedObjectLabel = res.label;
-        predictionBanner.innerText = `Détection : ${res.label} (${Math.round(res.confidences[res.label] * 100)}%)`;
+
+        liveDetectedObjectLabel = res.label;
+
+        const displayedLabel = lockedDetectedObjectLabel || liveDetectedObjectLabel;
+
+        predictionBanner.innerText = `Détection : ${displayedLabel} (${Math.round(res.confidences[res.label] * 100)}%)`;
         predictionBanner.style.color = "#00ffcc";
         predictionBanner.style.borderColor = "#00ffcc";
     } catch (err) {
@@ -296,14 +303,20 @@ async function bouclePrincipale() {
         valType.innerText = `${typeFrancais} (${cible.class})`;
 
         if (classifieurKNN.getNumClasses() > 0) {
-            if (!isPredictingKNN) {
-                isPredictingKNN = true;
-                executerKNNPrediction(box).then(() => { isPredictingKNN = false; });
-            }
-        } else {
-            predictionBanner.innerText = "L'IA n'est pas encore entraînée";
-            predictionBanner.style.color = "#aaa";
-        }
+    const canUpdateLabel = (etatActuel === "RECHERCHE" || etatActuel === "STABILISATION");
+
+    if (canUpdateLabel && !isPredictingKNN) {
+        isPredictingKNN = true;
+        executerKNNPrediction(box).then(() => { isPredictingKNN = false; });
+    } else if (lockedDetectedObjectLabel) {
+        predictionBanner.innerText = `Détection : ${lockedDetectedObjectLabel}`;
+        predictionBanner.style.color = "#00ffcc";
+        predictionBanner.style.borderColor = "#00ffcc";
+    }
+} else {
+    predictionBanner.innerText = "L'IA n'est pas encore entraînée";
+    predictionBanner.style.color = "#aaa";
+}
 
         if (etatActuel === "RECHERCHE" || etatActuel === "STABILISATION") {
             logiqueVerrouillageInitial(box);
@@ -322,7 +335,8 @@ async function bouclePrincipale() {
                     compteurFrames = 0; compteurEcrasement = 0;
                     ancienneBoiteObjet = null; boiteObjetVerrouillee = null;
                     valType.innerText = "Aucun déchet";
-                    detectedObjectLabel = null;
+                    liveDetectedObjectLabel = null;
+                    lockedDetectedObjectLabel = null;
                     predictionBanner.innerText = "En attente d'un objet...";
                     predictionBanner.style.color = "#fff";
                     predictionBanner.style.borderColor = "#444";
@@ -356,14 +370,18 @@ function logiqueVerrouillageInitial(box) {
         compteurFrames++;
         if (etatActuel !== "STABILISATION") { etatActuel = "STABILISATION"; mettreAJourStatut("STABILISATION INITIALE...", "yellow"); }
         if (compteurFrames >= PARAMS.reqFrames) {
-            boiteObjetVerrouillee = { x: box.x, y: box.y, width: box.width, height: box.height };
-            etatActuel = "ECRASEMENT";
-            compteurEcrasement = 0;
-            mettreAJourStatut("VERROUILLÉ - ATTENTE MAIN", "cyan");
+    boiteObjetVerrouillee = { x: box.x, y: box.y, width: box.width, height: box.height };
 
-            // Sample the object's colors so crush-overlay.js can use them for the tree
-            detectedPalette = sampleDominantColors(videoElement, box.x, box.y, box.width, box.height);
-        }
+    // Freeze the label at the moment the object is validated
+    lockedDetectedObjectLabel = liveDetectedObjectLabel;
+
+    etatActuel = "ECRASEMENT";
+    compteurEcrasement = 0;
+    mettreAJourStatut("VERROUILLÉ - ATTENTE MAIN", "cyan");
+
+    // Sample the object's colors so crush-overlay.js can use them for the tree
+    detectedPalette = sampleDominantColors(videoElement, box.x, box.y, box.width, box.height);
+}
     } else {
         compteurFrames = 0;
         etatActuel = "RECHERCHE";

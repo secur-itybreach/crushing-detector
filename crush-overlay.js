@@ -80,7 +80,11 @@ new p5(function (p) {
                 "Déchet Gris/Noir": "dark trash"
             };
 
-            const prompt = promptMap[detectedObjectLabel] || detectedObjectLabel || "unknown object";
+            const labelToUse = (typeof lockedDetectedObjectLabel !== 'undefined' && lockedDetectedObjectLabel)
+                ? lockedDetectedObjectLabel
+                : liveDetectedObjectLabel;
+
+            const prompt = promptMap[labelToUse] || labelToUse || "unknown object";
 
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({
