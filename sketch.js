@@ -52,6 +52,10 @@ let ancienneBoiteObjet = null, boiteObjetVerrouillee = null;
 // crush-overlay.js reads this when spawning the fractal tree.
 let detectedPalette = null;
 
+
+// Latest KNN object label, e.g. "Canette Orange"
+let detectedObjectLabel = null;
+
 // IA
 let modeleObjet = null, modeleMain = null, dernieresMains = []; 
 let modeleMobileNet = null, classifieurKNN = null;
@@ -170,6 +174,7 @@ async function executerKNNPrediction(box) {
     try {
         logits = obtenirFeaturesDeLaBox(box);
         const res = await classifieurKNN.predictClass(logits);
+        detectedObjectLabel = res.label;
         predictionBanner.innerText = `Détection : ${res.label} (${Math.round(res.confidences[res.label] * 100)}%)`;
         predictionBanner.style.color = "#00ffcc";
         predictionBanner.style.borderColor = "#00ffcc";
@@ -317,6 +322,7 @@ async function bouclePrincipale() {
                     compteurFrames = 0; compteurEcrasement = 0;
                     ancienneBoiteObjet = null; boiteObjetVerrouillee = null;
                     valType.innerText = "Aucun déchet";
+                    detectedObjectLabel = null;
                     predictionBanner.innerText = "En attente d'un objet...";
                     predictionBanner.style.color = "#fff";
                     predictionBanner.style.borderColor = "#444";

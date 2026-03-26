@@ -71,12 +71,25 @@ new p5(function (p) {
 
             console.log(`Added tree, palette: ${palette.map(c => `rgb(${c.r},${c.g},${c.b})`).join(' | ')}`);
 
+            const promptMap = {
+                "Canette Orange": "orange can",
+                "Canette Verte": "green can",
+                "Canette Bleue": "blue can",
+                "Canette Rouge": "red can",
+                "Gobelet Blanc": "white cup",
+                "Déchet Gris/Noir": "dark trash"
+            };
+
+            const prompt = promptMap[detectedObjectLabel] || detectedObjectLabel || "unknown object";
+
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({
                     type: "prompt",
-                    prompt: p.random(["flower", "shadows", "oranges"])
+                    prompt: prompt
                 }));
             }
+
+            console.log("Prompt envoyé à TouchDesigner :", prompt);
         }
         lastState = etatActuel;
 
